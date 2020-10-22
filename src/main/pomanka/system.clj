@@ -46,16 +46,10 @@
                  (:database config)
                  (assoc :database (db/new-database (:database config)))
 
-                 ;; producer
-                 (:producer config)
-                 (assoc :producer (component/using
-                                    (new-producer (:producer config))
-                                    [:database]))
                  ;; dumper
                  (:dumper config)
-                 (assoc :dumper (component/using
-                                  (new-dumper (:dumper config))
-                                  [:database :producer]))
+                 (assoc :dumper (new-dumper (:dumper config)))
+
                  ;; broker
                  (:broker config)
                  (assoc :broker (component/using

@@ -27,7 +27,7 @@
 
 (>defn load-all
   [database]
-  [::db/database => map?]
+  [::db/executable => map?]
   (let [data (db/execute! database {:select [:*]
                                     :from   [:topics]})]
     (->> data

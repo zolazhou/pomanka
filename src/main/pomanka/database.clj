@@ -53,15 +53,19 @@
 (s/def ::statement (s/or :sql-query vector? :sql-map map?))
 
 (>defn create-datasource
-  [{:keys [hostname port dbname driver username password pool-size]}]
+  [{:keys [hostname port dbtype dbname driver username password pool-size]
+    :or   {hostname "localhost"
+           dbtype   "postgresql"
+           port     5432}}]
   [::config => ::datasource]
-  (let [jdbc-url (str "jdbc:postgresql://" hostname ":" port "/" dbname)]
+  (let [jdbc-url (str "jdbc:" dbtype "://" hostname ":" port "/" dbname)]
     (hikari/make-datasource
       (cond-> {:jdbc-url          jdbc-url
                :username          username
                :password          password
                :maximum-pool-size pool-size}
         (some? driver) (assoc :driver-class-name driver)))))
+
 
 (>defn close-datasource
   [ds]

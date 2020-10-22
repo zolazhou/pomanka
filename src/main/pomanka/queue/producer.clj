@@ -3,7 +3,7 @@
     [clojure.spec.alpha :as s]
     [com.stuartsierra.component :as component]
     [crypto.random :as random]
-    [pomanka.queue.topics :as topic]
+    [pomanka.queue.topics :as q.topics]
     [pomanka.database :as db]))
 
 
@@ -17,7 +17,7 @@
 (defrecord Producer [config database]
   component/Lifecycle
   (start [this]
-    (let [topics (topic/load-all database)]
+    (let [topics (q.topics/load-all database)]
       (assoc this :topics (atom topics))))
   (stop [this]
     this))
@@ -32,9 +32,9 @@
   [{:keys [database topics]} topic-name]
   (if-some [topic (get @topics topic-name)]
     topic
-    (let [topic (topic/create-topic! database
-                                     #:topic{:name       topic-name
-                                             :partitions 2})]
+    (let [topic (q.topics/create-topic! database
+                                        #:topic{:name       topic-name
+                                                :partitions 2})]
       (swap! topics assoc topic-name topic)
       topic)))
 

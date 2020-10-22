@@ -6,7 +6,8 @@
     [com.stuartsierra.component :as component]
     [pomanka.bottlewater.schema :as schemas]
     [pomanka.database :as db]
-    [pomanka.queue.producer :as producer])
+    [pomanka.queue.producer :as producer]
+    [pomanka.queue.topics :as q.topics])
   (:import
     [io.debezium.engine ChangeEvent
                         DebeziumEngine
@@ -62,12 +63,12 @@
     props))
 
 (defn- schema->id
-  [{:keys [database schemas]} schema]
+  [{:keys [datasource schemas]} schema]
   (let [json   (json/encode schema)
         sha    (schemas/schema-sha json)
         schema (if-some [schema (get @schemas sha)]
                  schema
-                 (let [schema (schemas/new-schema! database json)]
+                 (let [schema (schemas/new-schema! datasource json)]
                    (swap! schemas assoc sha schema)
                    schema))]
     (:bw_schema/id schema)))
@@ -97,26 +98,26 @@
                 (update :payload compress-payload))}))
 
 (defn- handle-events
-  [{:keys [producer topic-name] :as context}
+  [{:keys [topic-name] :as context}
    ^List records
    ^DebeziumEngine$RecordCommitter committer]
   (doseq [record records]
     (producer/send!
-      producer
+      context
       {:topic   topic-name
        :payload (json/encode (convert-record context record))})
     (.markProcessed committer record)))
 
 (>defn- create-engine
-  [config database producer]
-  [::config ::db/database ::producer/producer => any?]
+  [config database]
+  [::config ::db/datasource => any?]
   (let [props   (engine-config config)
         builder (DebeziumEngine/create
                   (Class/forName "io.debezium.engine.format.Json"))
         context {:topic-name (:topic-name config)
                  :database   database
-                 :schemas    (atom (schemas/load-all database))
-                 :producer   producer}]
+                 :topics     (atom (q.topics/load-all database))
+                 :schemas    (atom (schemas/load-all database))}]
     (-> ^DebeziumEngine$Builder builder
         (.using ^Properties props)
         (.notifying
@@ -139,20 +140,25 @@
              (str "Failed to stop Postgres Dumper. Exiting without "
                   "cleanly shutting down pending tasks and/or callbacks.")))))
 
-(defrecord Dumper [config database producer]
+(defrecord Dumper [config]
   component/Lifecycle
   (start [this]
-    (let [engine   (create-engine config database producer)
+    (let [database (db/create-datasource (:database config))
+          engine   (create-engine config database)
           executor (Executors/newSingleThreadExecutor)]
       (.execute executor engine)
-      (assoc this :engine engine :executor executor)))
-  (stop [{:keys [engine executor]
+      (assoc this :database database
+                  :engine engine
+                  :executor executor)))
+  (stop [{:keys [database engine executor]
           :as   this}]
     (when (some? engine)
       (.close ^Closeable engine))
     (when (some? executor)
       (shutdown-executor executor))
-    (dissoc this :engine :executor)))
+    (when (some? database)
+      (db/close-datasource database))
+    (dissoc this :database :engine :executor)))
 
 (s/def ::dumper (partial instance? Dumper))
 

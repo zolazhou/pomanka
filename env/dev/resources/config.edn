@@ -8,8 +8,6 @@
             :password  "123123"
             :pool-size 5}
 
- :producer {}
-
  :dumper   {:source      {:hostname "docker-hostname"
                           :port     5432
                           :dbname   "sakura"

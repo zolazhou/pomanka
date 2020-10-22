@@ -9,7 +9,7 @@
 
 (>defn load-all
   [database]
-  [::db/database => map?]
+  [::db/executable => map?]
   (let [data (db/execute! database {:select [:*]
                                     :from   [:bw_schemas]})]
     (->> data
@@ -25,7 +25,7 @@
 
 (>defn new-schema!
   [database json-schema]
-  [::db/database string? => map?]
+  [::db/executable string? => map?]
   (db/execute-one!
     database
     (-> (h/insert-into :bw_schemas)
