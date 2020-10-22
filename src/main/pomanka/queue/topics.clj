@@ -34,13 +34,3 @@
          (map (fn [topic]
                 [(:topic/name topic) topic]))
          (into {}))))
-
-
-(comment
-
-  (def db (:database (calyx.system/running-system)))
-
-  (create-topic! db #:topic{:name       "ws_messages"
-                            :partitions 2})
-
-  )

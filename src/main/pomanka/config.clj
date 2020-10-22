@@ -62,4 +62,3 @@
          (throw (ex-info "Invalid configuration"
                          {:explain (s/explain-data ::config value)}))
          value)))))
-

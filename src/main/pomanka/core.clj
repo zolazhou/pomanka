@@ -25,4 +25,3 @@
     (if-some [errors (:errors args)]
       (doseq [e errors] (println e))
       (start-app args))))
-

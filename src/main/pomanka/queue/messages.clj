@@ -11,12 +11,3 @@
     (db/execute! database
                  [sql (or offset 0) limit]
                  {:builder-fn rs/as-unqualified-maps})))
-
-
-(comment
-
-  (def db (:database (calyx.system/running-system)))
-
-  (load-messages db "pg_change_records" 0 0 2)
-
-  )

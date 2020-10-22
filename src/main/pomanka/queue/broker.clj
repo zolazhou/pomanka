@@ -187,17 +187,9 @@
   (swap! offsets commit-offsets (:offsets packet))
   (ok))
 
-(comment
-  {["group1" "topic1" 1] 100
-   ["group1" "topic1" 2] 105
-   ["group1" "topic2" 1] 200
-   ["group1" "topic2" 2] 300}
-  )
-
 (defmethod handle :default
   [_ctx packet]
   (error 400 (str "Unknown packet: " (:type packet))))
-
 
 (defn- save-offsets
   [database offsets snapshot]

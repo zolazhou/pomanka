@@ -56,13 +56,11 @@
                  (assoc :dumper (component/using
                                   (new-dumper (:dumper config))
                                   [:database :producer]))
-
                  ;; broker
                  (:broker config)
                  (assoc :broker (component/using
                                   (new-broker (:broker config))
                                   [:database]))
-
                  ;; nrepl server
                  (:nrepl config)
                  (assoc :nrepl (new-nrepl-server (:nrepl config))))]
@@ -75,4 +73,3 @@
   [file]
   [::file => ::system]
   (-> file config/load-config app-system))
-

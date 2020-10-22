@@ -76,23 +76,3 @@
     (s/splice
       out
       (io/decode-stream s frame))))
-
-(comment
-  (require 'gloss.io)
-
-  (gloss.io/encode frame
-                   {:type     :subscribe
-                    :consumer "consumer"
-                    :topics   ["a" "b"]})
-
-  (gloss.io/decode
-    frame
-    (gloss.io/encode frame
-                     {:type    :commit
-                      :offsets [{:consumer  "a"
-                                 :topic     "t"
-                                 :partition 1
-                                 :value     2}]}))
-
-  )
-
