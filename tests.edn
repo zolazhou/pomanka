@@ -1,0 +1,15 @@
+#kaocha/v1
+    {:tests    [{:id           :unit
+                 :ns-patterns  ["-spec$" "-test"]
+                 :skip-meta    [:integration]
+                 :source-paths ["src/main"]
+                 :test-paths   ["test"]}
+                {:id           :integration
+                 :ns-patterns  ["-spec$" "-test"]
+                 :focus-meta   [:integration]
+                 :source-paths ["src/main"]
+                 :test-paths   ["test"]}]
+     :reporter [kaocha.report/dots]
+     :plugins  [:kaocha.plugin/randomize
+                :kaocha.plugin/filter
+                :kaocha.plugin/capture-output]}

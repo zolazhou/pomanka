@@ -1,0 +1,2 @@
+#!/bin/bash
+docker exec -it `docker-compose ps | grep -e "postgres[^-]" | awk '{print $1}'` /bin/bash

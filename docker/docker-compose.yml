@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  postgres_pomanka:
+    image: postgres:13.0-alpine
+    hostname: docker-hostname
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_USER: pomanka
+      POSTGRES_PASSWORD: 123123
+    command: "-c config_file=/etc/postgresql/postgresql.conf"
+    networks:
+      - zknet_pomanka
+
+networks:
+  zknet_pomanka:
+    driver: "bridge"

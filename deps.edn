@@ -1,0 +1,48 @@
+{:paths   ["resources" "src/main" "classes"]
+ :deps    {aleph/aleph                             {:mvn/version "0.4.6"}
+           calyx-core/calyx-core                   {:git/url "https://github.com/zolazhou/calyx-core.git" :sha "e9f294d5fac43f324ffafb87f502ff3ef8d9d9b4"}
+           com.fulcrologic/guardrails              {:mvn/version "0.0.12"}
+           cprop/cprop                             {:mvn/version "0.1.17"}
+           crypto-random/crypto-random             {:mvn/version "1.2.0"}
+           expound/expound                         {:mvn/version "0.8.6"}
+           gloss                                   {:mvn/version "0.2.6"}
+           hiccup/hiccup                           {:mvn/version "1.0.5"}
+           hikari-cp/hikari-cp                     {:mvn/version "2.13.0"}
+           honeysql/honeysql                       {:mvn/version "1.0.444"}
+           inflections/inflections                 {:mvn/version "0.13.2"}
+           io.debezium/debezium-connector-postgres {:mvn/version "1.3.0.Final"}
+           io.debezium/debezium-embedded           {:mvn/version "1.3.0.Final"}
+           metosin/spec-tools                      {:mvn/version "0.10.4"}
+           nilenso/honeysql-postgres               {:mvn/version "0.2.6"}
+           nrepl/nrepl                             {:mvn/version "0.8.2"}
+           org.apache.kafka/connect-api            {:mvn/version "2.6.0"}
+           org.postgresql/postgresql               {:mvn/version "42.2.17"}
+           reloaded.repl/reloaded.repl             {:mvn/version "0.2.4"}
+           seancorfield/next.jdbc                  {:mvn/version "1.1.588"}}
+
+ :aliases {:nrepl    {:main-opts ["-m" "nrepl.cmdline"]}
+
+           :dev      {:extra-deps  {org.clojure/tools.namespace {:mvn/version "1.0.0"}}
+                      :extra-paths ["env/dev/resources" "src/dev"]
+                      :jvm-opts    ["-Dguardrails.enabled=true"
+                                    "-Dtrace"
+                                    "-XX:-OmitStackTraceInFastThrow"]}
+
+           :test     {:extra-deps  {io.zonky.test/embedded-postgres                               {:mvn/version "1.2.7"}
+                                    io.zonky.test.postgres/embedded-postgres-binaries-linux-amd64 {:mvn/version "12.3.0"}
+                                    lambdaisland/kaocha                                           {:mvn/version "1.0.641"}
+                                    lambdaisland/kaocha-cloverage                                 {:mvn/version "1.0-45"}
+                                    org.clojure/test.check                                        {:mvn/version "1.1.0"}
+                                    peridot/peridot                                               {:mvn/version "0.5.3"}}
+                      :extra-paths ["env/dev/resources" "test" "docker"]
+                      :jvm-opts    ["-Dguardrails.enabled=true"]}
+
+           :pack     {:extra-deps {pack/pack.alpha {:git/url "https://github.com/juxt/pack.alpha.git"
+                                                    :sha     "0e8731e0f24db05b74769e219051b0e92b50624a"}}
+                      :main-opts  ["-m" "mach.pack.alpha.one-jar"
+                                   "-e" "env/prod/resources/"]}
+
+           :prod     {:extra-paths ["env/prod/resources"]}
+
+           :outdated {:extra-deps {olical/depot {:mvn/version "2.0.1"}}
+                      :main-opts  ["-m" "depot.outdated.main"]}}}
