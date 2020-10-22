@@ -1,13 +1,10 @@
 (ns pomanka.bottlewater.dumper
   (:require
     [calyx.json :as json]
-    [calyx.util :as util]
     [clojure.spec.alpha :as s]
-    [com.fulcrologic.guardrails.core :refer [>defn >defn- ? =>]]
+    [com.fulcrologic.guardrails.core :refer [>defn >defn- =>]]
     [com.stuartsierra.component :as component]
-    [honeysql.helpers :as h]
     [pomanka.bottlewater.schema :as schemas]
-    [pomanka.config :as config]
     [pomanka.database :as db]
     [pomanka.queue.producer :as producer])
   (:import
@@ -24,7 +21,18 @@
 
 (set! *warn-on-reflection* true)
 
-(s/def ::config ::config/dumper)
+(s/def ::source ::db/config)
+(s/def ::database ::db/config)
+(s/def ::name string?)
+(s/def ::slot-name string?)
+(s/def ::publication string?)
+(s/def ::topic-name string?)
+(s/def ::config (s/keys :req-un [::source
+                                 ::database
+                                 ::slot-name
+                                 ::publication
+                                 ::topic-name]
+                        :opt-un [::name]))
 
 (defn- engine-config
   [{:keys [source database name server-name slot-name publication]}]

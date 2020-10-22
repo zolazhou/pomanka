@@ -16,7 +16,6 @@
     [next.jdbc.date-time]
     [next.jdbc.prepare :as p]
     [next.jdbc.result-set :as rs]
-    [pomanka.config :as config]
     [taoensso.encore :as encore])
   (:import
     [clojure.lang IPersistentVector IPersistentMap]
@@ -32,10 +31,25 @@
 
 ;; spec ====================================================
 
+(s/def ::hostname string?)
+(s/def ::port pos-int?)
+(s/def ::dbtype string?)
+(s/def ::dbname string?)
+(s/def ::username string?)
+(s/def ::password string?)
+(s/def ::pool-size pos-int?)
+(s/def ::driver string?)
+(s/def ::config (s/keys :req-un [::hostname
+                                 ::port
+                                 ::dbname
+                                 ::username
+                                 ::password]
+                        :opt-un [::dbtype
+                                 ::driver
+                                 ::pool-size]))
+
 (s/def ::datasource (partial instance? HikariDataSource))
 (s/def ::connection (partial instance? Connection))
-(s/def ::config ::config/database)
-
 (s/def ::statement (s/or :sql-query vector? :sql-map map?))
 
 (>defn create-datasource

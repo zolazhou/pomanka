@@ -1,9 +1,10 @@
 (ns pomanka.queue.broker
   (:require
+    [clojure.spec.alpha :as s]
     [clojure.tools.logging :as log]
     [com.stuartsierra.component :as component]
     [manifold.deferred :as d]
-    [manifold.stream :as s]
+    [manifold.stream :as stream]
     [pomanka.protocol :as protocol]
     [pomanka.queue.messages :as q.messages]
     [pomanka.queue.offsets :as q.offsets]
@@ -11,6 +12,11 @@
     [pomanka.queue.topics :as q.topics])
   (:import [java.io Closeable]))
 
+
+(s/def ::port pos-int?)
+(s/def ::offsets-save-interval pos-int?)
+(s/def ::config (s/keys :req-un [::port
+                                 ::offsets-save-interval]))
 
 (defn- ok [] {:type :ok})
 
@@ -44,7 +50,7 @@
     (let [ctx (assoc ctx :client-info info)]
       (d/loop []
         ;; take a packet, and define a default value that tells us if the connection is closed
-        (-> (s/take! s ::none)
+        (-> (stream/take! s ::none)
             (d/chain
               ;; first, check if there even was a packet, and then transform it on another thread
               (fn [packet]
@@ -54,7 +60,7 @@
               ;; once the transformation is complete, write it back to the client
               (fn [response]
                 (when (not= ::none response)
-                  (s/put! s response)))
+                  (stream/put! s response)))
               ;; if we were successful in our response, recur and repeat
               (fn [result]
                 (if result
@@ -67,9 +73,9 @@
             (d/catch
               (fn [ex]
                 (log/error "Exception occurred:" ex)
-                (s/put! s (str "ERROR: " ex))
+                (stream/put! s (str "ERROR: " ex))
                 (log/info "Closing connection:" info)
-                (s/close! s)
+                (stream/close! s)
                 (disconnect ctx))))))))
 
 (defn- rebalance-topic
@@ -210,13 +216,13 @@
 
 (defn- setup-offsets-saver
   [{:keys [database offsets snapshot]} interval]
-  (let [stream (s/periodically interval
-                               interval
-                               #(save-offsets database offsets snapshot))]
-    (s/consume (fn [changed]
-                 (when (seq changed)
-                   (log/info "Offsets saved:" changed)))
-               stream)
+  (let [stream (stream/periodically interval
+                                    interval
+                                    #(save-offsets database offsets snapshot))]
+    (stream/consume (fn [changed]
+                      (when (seq changed)
+                        (log/info "Offsets saved:" changed)))
+                    stream)
     stream))
 
 (defrecord Broker [config database]
@@ -245,7 +251,7 @@
     (when (some? server)
       (.close ^Closeable server))
     (when (some? timer)
-      (s/close! timer))
+      (stream/close! timer))
     (when (some? offsets)
       (save-offsets database offsets snapshot))
     (dissoc this :server :clients :consumers :offsets :snapshot :timer)))

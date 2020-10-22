@@ -3,49 +3,19 @@
     [clojure.spec.alpha :as s]
     [clojure.tools.logging :as log]
     [cprop.core]
-    [cprop.source]))
+    [cprop.source]
+    [pomanka.bottlewater.dumper :as dumper]
+    [pomanka.database :as database]
+    [pomanka.queue.broker :as broker]))
 
 
-;; database
-(s/def :database/hostname string?)
-(s/def :database/port pos-int?)
-(s/def :database/dbname string?)
-(s/def :database/username string?)
-(s/def :database/password string?)
-(s/def :database/driver string?)
-(s/def :database/pool-size pos-int?)
-(s/def ::database (s/keys :req-un [:database/hostname
-                                   :database/port
-                                   :database/dbname
-                                   :database/username
-                                   :database/password]
-                          :opt-un [:database/driver
-                                   :database/pool-size]))
-
-;; dumper
-(s/def :dumper/source ::database)
-(s/def :dumper/database ::database)
-(s/def :dumper/name string?)
-(s/def :dumper/slot-name string?)
-(s/def :dumper/publication string?)
-(s/def :dumper/topic-name string?)
-(s/def ::dumper (s/keys :req-un [:dumper/source
-                                 :dumper/database
-                                 :dumper/slot-name
-                                 :dumper/publication
-                                 :dumper/topic-name]
-                        :opt-un [:dumper/name]))
-
-;; broker
-(s/def :broker/port pos-int?)
-(s/def :broker/offsets-save-interval pos-int?)
-(s/def ::broker (s/keys :req-un [:broker/port
-                                 :broker/offsets-save-interval]))
+(s/def ::database ::database/config)
+(s/def ::dumper ::dumper/config)
+(s/def ::broker ::broker/config)
 
 ;; config
 (s/def ::config (s/keys :req-un [::dumper ::database ::broker]
                         :opt-un []))
-
 
 (defn load-config
   ([]
