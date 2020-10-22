@@ -9,8 +9,7 @@
     [java.util.concurrent Future Executors ExecutorService TimeUnit]
     [org.apache.kafka.connect.errors ConnectException]
     [org.apache.kafka.connect.runtime WorkerConfig]
-    [org.apache.kafka.connect.util Callback]
-    [pomanka.bottlewater.offset PostgresOffsetBackingStore]))
+    [org.apache.kafka.connect.util Callback]))
 
 
 (gen-class
@@ -47,7 +46,7 @@
                                 (into []))))))
 
 (defn -start
-  [^PostgresOffsetBackingStore this]
+  [this]
   (let [state    (.state this)
         {:keys [config]} @state
         database (db/create-datasource (assoc config :pool-size 1))
@@ -58,7 +57,7 @@
            :cache cache)))
 
 (defn -stop
-  [^PostgresOffsetBackingStore this]
+  [this]
   (let [state (.state this)
         {:keys [database ^ExecutorService executor]} @state]
     (when (some? database)
@@ -76,7 +75,7 @@
     (swap! state assoc :database nil :executor nil)))
 
 (defn ^Future -get
-  [^PostgresOffsetBackingStore this ^Collection keys]
+  [this ^Collection keys]
   (let [state                     (.state this)
         ^ExecutorService executor (get @state :executor)]
     (.submit executor
@@ -90,7 +89,7 @@
                    result))))))
 
 (defn ^Future -set
-  [^PostgresOffsetBackingStore this ^Map values ^Callback callback]
+  [this ^Map values ^Callback callback]
   (let [state                     (.state this)
         ^ExecutorService executor (get @state :executor)]
     (.submit executor
@@ -111,7 +110,7 @@
 (defn- config-key [k] (str "offset.storage.postgres." k))
 
 (defn -configure
-  [^PostgresOffsetBackingStore this ^WorkerConfig config]
+  [this ^WorkerConfig config]
   (let [state  (.state this)
         ^Map m (.originals config)]
     (swap! state assoc :config

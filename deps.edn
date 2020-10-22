@@ -4,21 +4,17 @@
            com.fulcrologic/guardrails              {:mvn/version "0.0.12"}
            cprop/cprop                             {:mvn/version "0.1.17"}
            crypto-random/crypto-random             {:mvn/version "1.2.0"}
-           expound/expound                         {:mvn/version "0.8.6"}
-           gloss                                   {:mvn/version "0.2.6"}
-           hiccup/hiccup                           {:mvn/version "1.0.5"}
+           gloss/gloss                             {:mvn/version "0.2.6"}
            hikari-cp/hikari-cp                     {:mvn/version "2.13.0"}
            honeysql/honeysql                       {:mvn/version "1.0.444"}
            inflections/inflections                 {:mvn/version "0.13.2"}
            io.debezium/debezium-connector-postgres {:mvn/version "1.3.0.Final"}
            io.debezium/debezium-embedded           {:mvn/version "1.3.0.Final"}
-           metosin/spec-tools                      {:mvn/version "0.10.4"}
-           nilenso/honeysql-postgres               {:mvn/version "0.2.6"}
            nrepl/nrepl                             {:mvn/version "0.8.2"}
            org.apache.kafka/connect-api            {:mvn/version "2.6.0"}
-           org.postgresql/postgresql               {:mvn/version "42.2.17"}
+           org.postgresql/postgresql               {:mvn/version "42.2.18"}
            reloaded.repl/reloaded.repl             {:mvn/version "0.2.4"}
-           seancorfield/next.jdbc                  {:mvn/version "1.1.588"}}
+           seancorfield/next.jdbc                  {:mvn/version "1.1.610"}}
 
  :aliases {:nrepl    {:main-opts ["-m" "nrepl.cmdline"]}
 
