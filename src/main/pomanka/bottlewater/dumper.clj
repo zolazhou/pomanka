@@ -63,12 +63,12 @@
     props))
 
 (defn- schema->id
-  [{:keys [datasource schemas]} schema]
+  [{:keys [database schemas]} schema]
   (let [json   (json/encode schema)
         sha    (schemas/schema-sha json)
         schema (if-some [schema (get @schemas sha)]
                  schema
-                 (let [schema (schemas/new-schema! datasource json)]
+                 (let [schema (schemas/new-schema! database json)]
                    (swap! schemas assoc sha schema)
                    schema))]
     (:bw_schema/id schema)))
