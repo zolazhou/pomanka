@@ -37,7 +37,7 @@
 
 (defn- offset-config
   [{:keys [storage flush-interval props]
-    :or   {storage        "pomanka.bottlewater.offset.PostgresOffsetBackingStore"
+    :or   {storage        "pomanka.dumper.offset.PostgresOffsetBackingStore"
            flush-interval 10000}}]
   (assoc
     (->> props

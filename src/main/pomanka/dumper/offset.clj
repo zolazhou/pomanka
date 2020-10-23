@@ -13,7 +13,7 @@
 
 
 (gen-class
-  :name pomanka.bottlewater.offset.PostgresOffsetBackingStore
+  :name pomanka.dumper.offset.PostgresOffsetBackingStore
   :implements [org.apache.kafka.connect.storage.OffsetBackingStore]
   :state state
   :init init)

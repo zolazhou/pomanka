@@ -8,7 +8,7 @@ Before using this library, you need to compile a namespace to class:
 
 ```
 > mkdir classes
-> clj -M -e "(compile 'pomanka.bottlewater.offset)"
+> clj -M -e "(compile 'pomanka.dumper.offset)"
 ```
 
 Add `classes` dir to `:paths` section in deps.edn:
