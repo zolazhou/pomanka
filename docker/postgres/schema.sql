@@ -49,3 +49,9 @@ create table bw_schemas
 
 alter table bw_schemas
     owner to pomanka;
+
+
+create schema topics;
+
+alter schema topics
+    owner to pomanka;

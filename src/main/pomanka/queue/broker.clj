@@ -5,12 +5,18 @@
     [com.stuartsierra.component :as component]
     [manifold.deferred :as d]
     [manifold.stream :as stream]
-    [pomanka.protocol :as protocol]
     [pomanka.queue.messages :as q.messages]
     [pomanka.queue.offsets :as q.offsets]
+    [pomanka.queue.protocol :as protocol]
     [pomanka.queue.server :as server]
-    [pomanka.queue.topics :as q.topics])
-  (:import [java.io Closeable]))
+    [pomanka.queue.topics :as q.topics]
+    [pomanka.dumper.core :as dumper]
+    [pomanka.database :as db]
+    [calyx.json :as json]
+    [clojure.string :as str])
+  (:import [java.io Closeable]
+           [java.util List]
+           [io.debezium.engine DebeziumEngine$RecordCommitter ChangeEvent]))
 
 
 (s/def ::port pos-int?)
@@ -151,28 +157,37 @@
       groups)))
 
 (defn- load-messages
-  [database [_ topic partition offset]]
-  (d/chain
-    (d/future (q.messages/load-messages database topic partition offset 100))
-    (fn [messages]
-      (mapv (fn [{:keys [id payload]}]
-              {:topic     topic
-               :partition partition
-               :offset    id
-               :payload   (String. payload "UTF-8")})
-            messages))))
+  [database highwater [_ topic partition offset]]
+  (let [batch 100
+        high  (get-in @highwater [topic partition])]
+    (if (or (nil? high)
+            (< offset high))
+      (d/chain
+        (d/future (q.messages/load-messages database topic partition offset batch))
+        (fn [messages]
+          (let [messages (mapv (fn [{:keys [id payload]}]
+                                 {:topic     topic
+                                  :partition partition
+                                  :offset    id
+                                  :payload   (String. payload "UTF-8")})
+                               messages)]
+            (when (< (count messages) batch)
+              (swap! highwater update topic assoc partition
+                     (or (:offset (last messages)) offset)))
+            messages)))
+      [])))
 
 (defmethod handle :fetch
-  [{:keys [database client-info] :as ctx}
+  [{:keys [database highwater client-info] :as ctx}
    {:keys [consumers]}]
   (let [client     (:remote-addr client-info)
         groups     (cond-> (get @(:clients ctx) client)
                      (seq consumers) (select-keys consumers))
-        partitions (log/spy :info (partition-offsets @(:offsets ctx)
-                                                     @(:consumers ctx)
-                                                     groups
-                                                     client))
-        load-fn    (partial load-messages database)
+        partitions (partition-offsets @(:offsets ctx)
+                                      @(:consumers ctx)
+                                      groups
+                                      client)
+        load-fn    (partial load-messages database highwater)
         messages   @(d/chain
                       (apply d/zip (map load-fn partitions))
                       (fn [result] (vec (flatten result))))]
@@ -225,41 +240,103 @@
                     stream)
     stream))
 
-(defrecord Broker [config database]
+(def table->topic-partition
+  (memoize
+    (fn [table]
+      (let [parts (reverse (str/split table #"_"))]
+        (when (> (count parts) 1)
+          [(str/join "_" (reverse (rest parts)))
+           (Integer/parseInt (first parts))])))))
+
+(defn- handle-record
+  [{:keys [highwater]} ^ChangeEvent record]
+  (when-let [{:keys [op source after]} (some-> (.value record)
+                                               json/decode
+                                               :payload)]
+    (when (= op "c")
+      (when-let [[topic partition] (table->topic-partition (:table source))]
+        (swap! highwater update topic assoc partition (:id after))))))
+
+(defn- dumper-handler
+  [ctx]
+  (fn [^List records
+       ^DebeziumEngine$RecordCommitter committer]
+    (doseq [record records]
+      (handle-record ctx record)
+      (.markProcessed committer record))))
+
+(defn- create-dumper
+  [ctx config]
+  (let [dumper (dumper/create-dumper
+                 {:name        "topic_highwater"
+                  :source      (:database config)
+                  :offset      {:storage "org.apache.kafka.connect.storage.MemoryOffsetBackingStore"}
+                  :server-name "pomanka_topics"
+                  :slot-name   "topic_highwater"
+                  :publication "topic_highwater"
+                  :extra       {"schema.include.list" "topics"
+                                "slot.drop.on.stop"   "true"
+                                "snapshot.mode"       "never"}}
+                 (dumper-handler ctx))]
+    (dumper/start dumper)
+    dumper))
+
+(defrecord Broker [config]
   component/Lifecycle
   (start [this]
     (log/info "Starting broker:" (:port config) "...")
-    (let [clients   (ref {})
+    (let [database  (db/create-datasource (:database config))
+          clients   (ref {})
           consumers (ref {})
           offsets   (atom (q.offsets/load-all database))
           snapshot  (atom @offsets)
+          highwater (atom {})
           ctx       {:database  database
                      :clients   clients
                      :consumers consumers
                      :offsets   offsets
-                     :snapshot  snapshot}
+                     :snapshot  snapshot
+                     :highwater highwater}
           server    (start-server (connection ctx) (:port config))
-          timer     (setup-offsets-saver ctx (:offsets-save-interval config))]
-      (assoc this :server server
+          timer     (setup-offsets-saver ctx (:offsets-save-interval config))
+          dumper    (create-dumper ctx config)]
+      (assoc this :database database
+                  :server server
                   :clients clients
                   :consumers consumers
                   :offsets offsets
                   :snapshot snapshot
-                  :timer timer)))
-  (stop [{:keys [server offsets snapshot timer] :as this}]
+                  :timer timer
+                  :highwater highwater
+                  :dumper dumper)))
+  (stop [{:keys [database server dumper offsets snapshot timer] :as this}]
     (log/info "Stopping broker ...")
+    (when (some? dumper)
+      (dumper/stop dumper))
     (when (some? server)
       (.close ^Closeable server))
     (when (some? timer)
       (stream/close! timer))
     (when (some? offsets)
       (save-offsets database offsets snapshot))
-    (dissoc this :server :clients :consumers :offsets :snapshot :timer)))
+    (when (some? database)
+      (db/close-datasource database))
+    (dissoc this
+            :database
+            :server
+            :clients
+            :consumers
+            :offsets
+            :snapshot
+            :timer
+            :dumper
+            :highwater)))
 
 (defn new-broker
   [config]
   (map->Broker {:config config}))
 
+(s/def ::broker (partial instance? Broker))
 
 (comment
 
@@ -269,8 +346,9 @@
   @(:consumers broker)
   @(:offsets broker)
   @(:snapshot broker)
+  @(:highwater broker)
 
-  (require '[pomanka.client.core :as client])
+  (require '[pomanka.queue.client :as client])
 
   (def c @(client/connect "localhost" 10000))
   (def c1 @(client/connect "localhost" 10000))
@@ -284,11 +362,11 @@
   @(client/commit c [{:consumer  "hashtree"
                       :topic     "pg_change_records"
                       :partition 0
-                      :offset    2}
+                      :offset    4}
                      {:consumer  "hashtree"
                       :topic     "pg_change_records"
                       :partition 1
-                      :offset    5}])
+                      :offset    2}])
   )
 
 (comment

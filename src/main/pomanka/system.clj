@@ -6,11 +6,9 @@
     [com.fulcrologic.guardrails.core :refer [>defn =>]]
     [com.stuartsierra.component :as component]
     [nrepl.server :as nrepl]
-    [pomanka.bottlewater.dumper :refer [new-dumper]]
+    [pomanka.bottlewater.core :as bottlewater]
     [pomanka.config :as config]
-    [pomanka.database :as db]
-    [pomanka.queue.broker :refer [new-broker]]
-    [pomanka.queue.producer :refer [new-producer]]))
+    [pomanka.queue.broker :as broker]))
 
 
 ;; nREPL
@@ -31,9 +29,11 @@
 
 ;; spec
 
-(s/def ::database ::db/database)
+(s/def ::bottlewater ::bottlewater/bottlewater)
+(s/def ::broker ::broker/broker)
 (s/def ::nrepl (partial instance? NReplServer))
-(s/def ::system (s/keys :opt-un [::database
+(s/def ::system (s/keys :opt-un [::bottlewater
+                                 ::broker
                                  ::nrepl]))
 
 ;; system
@@ -42,19 +42,15 @@
   [config]
   [::config/config => ::system]
   (let [system (cond-> {}
-                 ;; database
-                 (:database config)
-                 (assoc :database (db/new-database (:database config)))
-
-                 ;; dumper
-                 (:dumper config)
-                 (assoc :dumper (new-dumper (:dumper config)))
+                 ;; bottlewater
+                 (:bottlewater config)
+                 (assoc :bottlewater (bottlewater/new-bottlewater
+                                       (:bottlewater config)))
 
                  ;; broker
                  (:broker config)
-                 (assoc :broker (component/using
-                                  (new-broker (:broker config))
-                                  [:database]))
+                 (assoc :broker (broker/new-broker (:broker config)))
+
                  ;; nrepl server
                  (:nrepl config)
                  (assoc :nrepl (new-nrepl-server (:nrepl config))))]

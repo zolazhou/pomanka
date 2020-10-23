@@ -1,4 +1,4 @@
-(ns pomanka.bottlewater.offset
+(ns pomanka.dumper.offset
   (:require
     [next.jdbc :as jdbc]
     [next.jdbc.prepare :as prep]
@@ -118,4 +118,5 @@
             :port     (Integer/parseInt (.get m (config-key "port")))
             :username (.get m (config-key "username"))
             :password (.get m (config-key "password"))
-            :dbname   (.get m (config-key "dbname"))})))
+            :dbname   (.get m (config-key "dbname"))
+            :table    (.get m (config-key "table"))})))

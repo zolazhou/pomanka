@@ -13,21 +13,6 @@
 (s/def ::message (s/keys :req-un [::topic ::payload]
                          :opt-un [::key]))
 
-
-(defrecord Producer [config database]
-  component/Lifecycle
-  (start [this]
-    (let [topics (q.topics/load-all database)]
-      (assoc this :topics (atom topics))))
-  (stop [this]
-    this))
-
-(defn new-producer
-  [config]
-  (map->Producer {:config config}))
-
-(s/def ::producer (partial instance? Producer))
-
 (defn- get-topic!
   [{:keys [database topics]} topic-name]
   (if-some [topic (get @topics topic-name)]
@@ -44,11 +29,29 @@
 
 ;; TODO async producer
 (defn send!
-  [{:keys [database] :as context}
+  [{:keys [database] :as producer}
    {:keys [topic key payload]}]
-  (let [{:topic/keys [name partitions]} (get-topic! context topic)
-        table (str name "_" (get-partition partitions key))
+  (let [{:topic/keys [name partitions]} (get-topic! producer topic)
+        table (str "topics." name "_" (get-partition partitions key))
         sql   (str "INSERT INTO " table " (payload) VALUES (?)")]
     (db/execute! database [sql (if (string? payload)
                                  (.getBytes payload "UTF-8")
                                  payload)])))
+
+(defn create-producer
+  [database]
+  {:database database
+   :topics   (atom (q.topics/load-all database))})
+
+(defrecord Producer [config database]
+  component/Lifecycle
+  (start [this]
+    (assoc this :producer (create-producer database)))
+  (stop [this]
+    this))
+
+(defn new-producer
+  [config]
+  (map->Producer {:config config}))
+
+(s/def ::producer (partial instance? Producer))

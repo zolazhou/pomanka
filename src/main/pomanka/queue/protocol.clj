@@ -1,9 +1,9 @@
-(ns pomanka.protocol
+(ns pomanka.queue.protocol
   (:require
     [gloss.core :as g :refer [defcodec]]
     [gloss.core.codecs :refer [enum]]
     [gloss.io :as io]
-    [manifold.stream :as s]))
+    [manifold.stream :as stream]))
 
 
 (defcodec packet-type
@@ -69,10 +69,10 @@
 
 (defn wrap-duplex-stream
   [s]
-  (let [out (s/stream)]
-    (s/connect
-      (s/map #(io/encode frame %) out)
+  (let [out (stream/stream)]
+    (stream/connect
+      (stream/map #(io/encode frame %) out)
       s)
-    (s/splice
+    (stream/splice
       out
       (io/decode-stream s frame))))

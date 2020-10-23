@@ -4,17 +4,15 @@
     [clojure.tools.logging :as log]
     [cprop.core]
     [cprop.source]
-    [pomanka.bottlewater.dumper :as dumper]
-    [pomanka.database :as database]
+    [pomanka.bottlewater.core :as bottlewater]
     [pomanka.queue.broker :as broker]))
 
 
-(s/def ::database ::database/config)
-(s/def ::dumper ::dumper/config)
+(s/def ::bottlewater ::bottlewater/config)
 (s/def ::broker ::broker/config)
 
 ;; config
-(s/def ::config (s/keys :req-un [::dumper ::database ::broker]
+(s/def ::config (s/keys :req-un [::bottlewater ::broker]
                         :opt-un []))
 
 (defn load-config

@@ -9,7 +9,7 @@
   [database name]
   (db/execute!
     database
-    [(str "CREATE TABLE IF NOT EXISTS " name "(\n"
+    [(str "CREATE TABLE IF NOT EXISTS topics." name "(\n"
           "  id BIGSERIAL CONSTRAINT " name "_pk PRIMARY KEY,\n"
           "  ts TIMESTAMP DEFAULT NOW() NOT NULL,\n"
           "  payload BYTEA\n"

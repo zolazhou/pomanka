@@ -1,34 +1,39 @@
-{
- :logging  {:level :debug}
+{:logging     {:level :debug}
 
- :database {:hostname  "docker-hostname"
-            :port      5432
-            :dbname    "pomanka"
-            :username  "pomanka"
-            :password  "123123"
-            :pool-size 5}
+ :bottlewater {:dumper {:source      {:hostname "docker-hostname"
+                                      :port     5432
+                                      :dbname   "sakura"
+                                      :username "pomanka"
+                                      :password "123123"}
+                        ;; offset storage
+                        :offset      {:props {"postgres.hostname" "docker-hostname"
+                                              "postgres.port"     5432
+                                              "postgres.dbname"   "pomanka"
+                                              "postgres.username" "pomanka"
+                                              "postgres.password" "123123"
+                                              "postgres.table"    "bw_offsets"}}
+                        :server-name "test_server"
+                        :name        "Engine"
+                        :publication "test_publication"
+                        :slot-name   "test_repl"}
+               :target {:hostname  "docker-hostname"
+                        :port      5432
+                        :dbname    "pomanka"
+                        :username  "pomanka"
+                        :password  "123123"
+                        :pool-size 1}
+               :topic  "pg_change_records"}
 
- :dumper   {:source      {:hostname "docker-hostname"
-                          :port     5432
-                          :dbname   "sakura"
-                          :username "pomanka"
-                          :password "123123"}
-            :database    {:hostname  "docker-hostname"
-                          :port      5432
-                          :dbname    "pomanka"
-                          :username  "pomanka"
-                          :password  "123123"
-                          :pool-size 1}
-            :server-name "test_server"
-            :name        "Engine"
-            :publication "test_publication"
-            :slot-name   "test_repl"
-            :topic-name  "pg_change_records"}
+ :broker      {:database              {:hostname  "docker-hostname"
+                                       :port      5432
+                                       :dbname    "pomanka"
+                                       :username  "pomanka"
+                                       :password  "123123"
+                                       :pool-size 5}
+               :port                  10000
+               :offsets-save-interval 5000}
 
- :broker   {:port                  10000
-            :offsets-save-interval 5000}
-
- :http     {:ip    "0.0.0.0"
-            :port  3000
-            :debug true}
+ :http        {:ip    "0.0.0.0"
+               :port  3000
+               :debug true}
  }

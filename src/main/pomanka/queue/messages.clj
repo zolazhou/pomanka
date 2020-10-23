@@ -6,7 +6,7 @@
 
 (defn load-messages
   [database topic partition offset limit]
-  (let [sql (str "SELECT * FROM " topic "_" partition
+  (let [sql (str "SELECT * FROM topics." topic "_" partition
                  " WHERE id > ? LIMIT ?")]
     (db/execute! database
                  [sql (or offset 0) limit]

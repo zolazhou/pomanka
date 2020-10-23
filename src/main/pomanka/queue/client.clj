@@ -1,9 +1,9 @@
-(ns pomanka.client.core
+(ns pomanka.queue.client
   (:require
     [aleph.tcp :as tcp]
     [manifold.deferred :as d]
     [manifold.stream :as s]
-    [pomanka.protocol :as protocol])
+    [pomanka.queue.protocol :as protocol])
   (:import [java.io Closeable]))
 
 
