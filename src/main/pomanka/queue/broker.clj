@@ -1,27 +1,30 @@
 (ns pomanka.queue.broker
   (:require
+    [calyx.json :as json]
     [clojure.spec.alpha :as s]
+    [clojure.string :as str]
     [clojure.tools.logging :as log]
     [com.stuartsierra.component :as component]
     [manifold.deferred :as d]
     [manifold.stream :as stream]
+    [pomanka.database :as db]
+    [pomanka.dumper.core :as dumper]
     [pomanka.queue.messages :as q.messages]
     [pomanka.queue.offsets :as q.offsets]
     [pomanka.queue.protocol :as protocol]
     [pomanka.queue.server :as server]
-    [pomanka.queue.topics :as q.topics]
-    [pomanka.dumper.core :as dumper]
-    [pomanka.database :as db]
-    [calyx.json :as json]
-    [clojure.string :as str])
-  (:import [java.io Closeable]
-           [java.util List]
-           [io.debezium.engine DebeziumEngine$RecordCommitter ChangeEvent]))
+    [pomanka.queue.topics :as q.topics])
+  (:import
+    [java.io Closeable]
+    [java.util List]
+    [io.debezium.engine ChangeEvent DebeziumEngine$RecordCommitter]))
 
 
+(s/def ::database ::db/config)
 (s/def ::port pos-int?)
 (s/def ::offsets-save-interval pos-int?)
-(s/def ::config (s/keys :req-un [::port
+(s/def ::config (s/keys :req-un [::database
+                                 ::port
                                  ::offsets-save-interval]))
 
 (defn- ok [] {:type :ok})
