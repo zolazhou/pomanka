@@ -27,6 +27,10 @@
   [n k]
   (mod (hash (or k (random/bytes 10))) n))
 
+(defn ensure-topic!
+  [producer topic-name]
+  (get-topic! producer topic-name))
+
 ;; TODO async producer
 (defn send!
   [{:keys [database] :as producer}

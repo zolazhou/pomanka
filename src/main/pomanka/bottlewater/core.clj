@@ -84,10 +84,13 @@
 (defrecord Bottlewater [config]
   component/Lifecycle
   (start [this]
-    (let [database (db/create-datasource (:target config))
-          context  {:topic    (:topic config)
+    (let [topic    (:topic config)
+          database (db/create-datasource (:target config))
+          producer (producer/create-producer database)
+          _        (producer/ensure-topic! producer topic)
+          context  {:topic    topic
                     :database database
-                    :producer (producer/create-producer database)
+                    :producer producer
                     :schemas  (atom (schemas/load-all database))}
           dumper   (dumper/create-dumper (:dumper config)
                                          (make-handler context))]
