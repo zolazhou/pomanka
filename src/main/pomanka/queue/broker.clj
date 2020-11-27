@@ -159,10 +159,11 @@
       []
       groups)))
 
-(defn- load-messages
+(defn- load-partition-messages
   [database highwater [_ topic partition offset]]
-  (let [batch 100
-        high  (get-in @highwater [topic partition])]
+  (let [batch  100
+        offset (or offset 0)
+        high   (get-in @highwater [topic partition])]
     (if (or (nil? high)
             (< offset high))
       (d/chain
@@ -180,9 +181,34 @@
             messages)))
       [])))
 
+(defn- load-messages
+  [{:keys [database highwater waiting]} partitions timeout]
+  (letfn [(load-partition [partition]
+            (load-partition-messages database highwater partition))
+          (do-load []
+            @(d/chain
+               (apply d/zip (map load-partition partitions))
+               (fn [result] (vec (flatten result)))))]
+    (let [msgs (do-load)]
+      (if (or (seq msgs) (zero? timeout))
+        msgs
+        (let [condvar (Object.)
+              topics  (->> partitions
+                           (reduce (fn [acc [_ topic _ _]] (conj acc topic)) #{}))
+              cj      #((fnil conj #{}) % condvar)]
+          (swap! waiting #(reduce (fn [a t] (update a t cj))
+                                  %
+                                  topics))
+          (locking condvar
+            (.wait condvar timeout))
+          (swap! waiting #(reduce (fn [a t] (update a t disj condvar))
+                                  %
+                                  topics))
+          (do-load))))))
+
 (defmethod handle :fetch
-  [{:keys [database highwater client-info] :as ctx}
-   {:keys [consumers]}]
+  [{:keys [client-info] :as ctx}
+   {:keys [consumers timeout]}]
   (let [client     (:remote-addr client-info)
         groups     (cond-> (get @(:clients ctx) client)
                      (seq consumers) (select-keys consumers))
@@ -190,10 +216,7 @@
                                       @(:consumers ctx)
                                       groups
                                       client)
-        load-fn    (partial load-messages database highwater)
-        messages   @(d/chain
-                      (apply d/zip (map load-fn partitions))
-                      (fn [result] (vec (flatten result))))]
+        messages   (load-messages ctx partitions timeout)]
     {:type     :fetch-response
      :messages messages}))
 
@@ -252,13 +275,17 @@
            (Integer/parseInt (first parts))])))))
 
 (defn- handle-record
-  [{:keys [highwater]} ^ChangeEvent record]
+  [{:keys [highwater waiting]} ^ChangeEvent record]
   (when-let [{:keys [op source after]} (some-> (.value record)
                                                json/decode
                                                :payload)]
     (when (= op "c")
       (when-let [[topic partition] (table->topic-partition (:table source))]
-        (swap! highwater update topic assoc partition (:id after))))))
+        (swap! highwater update topic assoc partition (:id after))
+        (when-let [condvars (get @waiting topic)]
+          (doseq [v condvars]
+            (locking v
+              (.notifyAll v))))))))
 
 (defn- dumper-handler
   [ctx]
@@ -294,12 +321,14 @@
           offsets   (atom (q.offsets/load-all database))
           snapshot  (atom @offsets)
           highwater (atom {})
+          waiting   (atom {})
           ctx       {:database  database
                      :clients   clients
                      :consumers consumers
                      :offsets   offsets
                      :snapshot  snapshot
-                     :highwater highwater}
+                     :highwater highwater
+                     :waiting   waiting}
           server    (start-server (connection ctx) (:port config))
           timer     (setup-offsets-saver ctx (:offsets-save-interval config))
           dumper    (create-dumper ctx config)]
@@ -311,6 +340,7 @@
                   :snapshot snapshot
                   :timer timer
                   :highwater highwater
+                  :waiting waiting
                   :dumper dumper)))
   (stop [{:keys [database server dumper offsets snapshot timer] :as this}]
     (log/info "Stopping broker ...")
@@ -333,7 +363,8 @@
             :snapshot
             :timer
             :dumper
-            :highwater)))
+            :highwater
+            :waiting)))
 
 (defn new-broker
   [config]
@@ -350,6 +381,7 @@
   @(:offsets broker)
   @(:snapshot broker)
   @(:highwater broker)
+  @(:waiting broker)
 
   (require '[pomanka.queue.client :as client])
 
@@ -361,15 +393,15 @@
 
   @(client/subscribe c "hashtree" ["pg_change_records"])
 
-  @(client/fetch c ["hashtree"])
+  (def msgs (future @(client/fetch c ["hashtree"] 500000)))
+
+  @msgs
+
   @(client/commit c [{:consumer  "hashtree"
                       :topic     "pg_change_records"
                       :partition 0
-                      :offset    4}
-                     {:consumer  "hashtree"
-                      :topic     "pg_change_records"
-                      :partition 1
-                      :offset    2}])
+                      :offset    3}
+                     ])
   )
 
 (comment

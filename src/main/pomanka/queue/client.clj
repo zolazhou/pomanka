@@ -22,11 +22,14 @@
     (fn [_] (s/take! client))))
 
 (defn fetch
-  [client consumers]
-  (d/chain
-    (s/put! client {:type      :fetch
-                    :consumers consumers})
-    (fn [_] (s/take! client))))
+  ([client consumers]
+   (fetch client consumers 0))
+  ([client consumers timeout]
+   (d/chain
+     (s/put! client {:type      :fetch
+                     :consumers consumers
+                     :timeout   timeout})
+     (fn [_] (s/take! client)))))
 
 (defn commit
   [client offsets]

@@ -2,8 +2,7 @@
   (:require
     [clojure.spec.alpha :as s]
     [com.fulcrologic.guardrails.core :refer [>defn >defn- =>]]
-    [pomanka.database :as db]
-    [clojure.tools.logging :as log])
+    [pomanka.database :as db])
   (:import
     [io.debezium.engine DebeziumEngine
                         DebeziumEngine$Builder

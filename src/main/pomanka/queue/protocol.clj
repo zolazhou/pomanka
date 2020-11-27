@@ -44,7 +44,8 @@
                   :offsets offsets})
 
 (defcodec fetch {:type      :fetch
-                 :consumers consumers})
+                 :consumers consumers
+                 :timeout   :int32})
 
 (defcodec message {:topic     string
                    :partition :int16
