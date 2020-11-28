@@ -41,7 +41,7 @@
     (:bw_schema/id schema)))
 
 (defn- compress-payload
-  "Removed unchanged columns from before field"
+  "Removed unchanged columns from after field"
   [{:keys [op before after] :as payload}]
   (if (and (= op "u") (map? before))
     (let [diff (reduce
@@ -51,8 +51,7 @@
                      acc))
                  []
                  after)]
-      (assoc payload :before (select-keys before diff)
-                     :after (select-keys after diff)))
+      (assoc payload :after (select-keys after diff)))
     payload))
 
 (defn- convert-record
