@@ -43,14 +43,16 @@
 (defn- compress-payload
   "Removed unchanged columns from before field"
   [{:keys [op before after] :as payload}]
-  (case op
-    "u" (reduce
-          (fn [acc [k v]]
-            (if (not= v (get after k))
-              (assoc acc k v)
-              acc))
-          {}
-          before)
+  (if (and (= op "u") (map? before))
+    (let [diff (reduce
+                 (fn [acc [k v]]
+                   (if (not= v (get before k))
+                     (conj acc k)
+                     acc))
+                 []
+                 after)]
+      (assoc payload :before (select-keys before diff)
+                     :after (select-keys after diff)))
     payload))
 
 (defn- convert-record

@@ -3,8 +3,8 @@
     [aleph.tcp :as tcp]
     [manifold.deferred :as d]
     [manifold.stream :as s]
-    [pomanka.queue.protocol :as protocol])
-  (:import [java.io Closeable]))
+    [manifold.stream :as stream]
+    [pomanka.queue.protocol :as protocol]))
 
 
 (defn connect
@@ -27,7 +27,9 @@
   ([client consumers timeout]
    (d/chain
      (s/put! client {:type      :fetch
-                     :consumers consumers
+                     :consumers (if (string? consumers)
+                                  [consumers]
+                                  consumers)
                      :timeout   timeout})
      (fn [_] (s/take! client)))))
 
@@ -35,12 +37,12 @@
   [client offsets]
   (d/chain
     (s/put! client {:type    :commit
-                    :offsets offsets})
+                    :offsets (vec offsets)})
     (fn [_] (s/take! client))))
 
 (defn close
-  [^Closeable client]
-  (.close client))
+  [client]
+  (stream/close! client))
 
 (defn group-by-partition
   [messages]
