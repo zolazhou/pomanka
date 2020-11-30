@@ -61,9 +61,9 @@
         value   (json/decode (.value record))
         convert (partial schema->id context)]
     {:key   (update key :schema convert)
-     :value (-> value
-                (update :schema convert)
-                (update :payload compress-payload))}))
+     :value (some-> value
+                    (update :schema convert)
+                    (update :payload compress-payload))}))
 
 (defn- handle-events
   [{:keys [producer topic] :as context}
