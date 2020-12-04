@@ -3,8 +3,8 @@
     [clojure.spec.alpha :as s]
     [com.stuartsierra.component :as component]
     [crypto.random :as random]
-    [pomanka.queue.topics :as q.topics]
-    [pomanka.database :as db]))
+    [pomanka.database :as db]
+    [pomanka.queue.topics :as q.topics]))
 
 
 (s/def ::topic string?)
@@ -12,6 +12,10 @@
 (s/def ::payload string?)
 (s/def ::message (s/keys :req-un [::topic ::payload]
                          :opt-un [::key]))
+
+(s/def ::database ::db/config)
+(s/def ::config (s/keys :req-un [::database]))
+
 
 (defn- get-topic!
   [{:keys [database topics]} topic-name]
@@ -35,8 +39,11 @@
 (defn send!
   [{:keys [database] :as producer}
    {:keys [topic key payload]}]
-  (let [{:topic/keys [name partitions]} (get-topic! producer topic)
-        table (str "topics." name "_" (get-partition partitions key))
+  (let [{:topic/keys [name partitions]} (get-topic! producer
+                                                    (if (keyword? topic)
+                                                      (name topic)
+                                                      topic))
+        table (str "topics." name "_" (get-partition partitions (str key)))
         sql   (str "INSERT INTO " table " (payload) VALUES (?)")]
     (db/execute! database [sql (if (string? payload)
                                  (.getBytes payload "UTF-8")
@@ -50,9 +57,15 @@
 (defrecord Producer [config database]
   component/Lifecycle
   (start [this]
-    (assoc this :producer (create-producer database)))
+    (let [database (if-let [db-config (:database config)]
+                     (db/create-datasource db-config)
+                     database)]
+      (assoc this :topics (atom (q.topics/load-all database))
+                  :database database)))
   (stop [this]
-    this))
+    (when (and (:database this) (some? (:database config)))
+      (db/close-datasource (:database this)))
+    (dissoc this :database :topics)))
 
 (defn new-producer
   [config]

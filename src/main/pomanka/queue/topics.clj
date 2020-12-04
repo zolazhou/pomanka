@@ -1,6 +1,5 @@
 (ns pomanka.queue.topics
   (:require
-    [com.fulcrologic.guardrails.core :refer [>defn >defn- ? =>]]
     [honeysql.helpers :as h]
     [pomanka.database :as db]))
 
@@ -25,12 +24,25 @@
                          (h/values [topic]))
                      {:return-keys true})))
 
-(>defn load-all
+(defn load-all
   [database]
-  [::db/executable => map?]
   (let [data (db/execute! database {:select [:*]
                                     :from   [:topics]})]
     (->> data
          (map (fn [topic]
                 [(:topic/name topic) topic]))
          (into {}))))
+
+(defn get-topic
+  [database topic-name]
+  (db/execute-one!
+    database
+    {:select [:*]
+     :from   [:topics]
+     :where  [:= :name topic-name]}))
+
+(defn get-or-create-topic!
+  [database topic-name]
+  (or (get-topic database topic-name)
+      (create-topic! database #:topic{:name       topic-name
+                                      :partitions 2})))

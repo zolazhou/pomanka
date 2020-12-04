@@ -109,10 +109,16 @@
 
 (defn- topic-partitions
   [database topics]
-  (let [all (q.topics/load-all database)]
-    (->> (set topics)
-         (map (fn [t] [t (:topic/partitions (get all t))]))
-         (into {}))))
+  (transduce
+    (comp (map (fn [t] (q.topics/get-or-create-topic! database t)))
+          (map (fn [{:topic/keys [name partitions]}] [name partitions])))
+    (fn
+      ([] [])
+      ([result] result)
+      ([result [x y]]
+       (assoc result x y)))
+    {}
+    topics))
 
 (defmethod handle :subscribe
   [{:keys [database consumers clients client-info]}
